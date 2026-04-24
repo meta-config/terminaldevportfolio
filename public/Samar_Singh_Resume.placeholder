@@ -1,0 +1,10 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Resume Placeholder</title>
+</head>
+<body>
+    <h1>Resume PDF Not Found</h1>
+    <p>Please place your resume PDF file as <code>Samar_Singh_Resume.pdf</code> in the public folder.</p>
+</body>
+</html>
