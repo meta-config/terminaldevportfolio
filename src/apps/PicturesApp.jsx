@@ -30,47 +30,60 @@ const PicturesApp = () => {
   }, [selectedIndex])
 
   return (
-    <div className="w-full h-full flex flex-col bg-black text-red-500 font-mono">
+    <div className="w-full h-full flex flex-col bg-black text-red-500 font-mono uppercase">
       {selectedImage ? (
         <div className="w-full h-full flex flex-col bg-black">
-          <div className="px-4 py-2 border-b border-neutral-800 flex items-center justify-between">
+          <div className="px-4 py-2 border-b-2 border-red-900 flex items-center justify-between">
             <div className="text-sm">
-              {selectedImage.fileName}
+              VIEWING: {selectedImage.fileName}
             </div>
             <button
               type="button"
               onClick={closeImage}
-              className="px-2 py-0.5 border border-neutral-700 text-red-500 hover:bg-neutral-900"
+              className="px-3 py-1 border border-red-500 text-red-500 hover:bg-red-900 font-bold"
               aria-label="Close image"
             >
-              ✕
+              [X] CLOSE
             </button>
           </div>
 
-          <div className="flex-1 min-h-0 flex items-center justify-center bg-black">
-            <img
-              src={selectedImage.src}
-              alt={selectedImage.alt}
-              className="max-w-full max-h-full object-contain"
-            />
+          <div className="flex-1 min-h-0 flex items-center justify-center bg-black p-4">
+            <div className="border-[4px] border-gray-800 p-1 w-full h-full max-h-full flex items-center justify-center">
+              <img
+                src={selectedImage.src}
+                alt={selectedImage.alt}
+                className="max-w-full max-h-full object-contain"
+                style={{ imageRendering: 'pixelated' }}
+              />
+            </div>
           </div>
         </div>
       ) : (
         <div className="w-full h-full flex flex-col bg-black">
-          <div className="px-4 py-2 border-b border-neutral-800 text-sm">
-            /home/samarsingh/pictures
+          <div className="px-4 py-2 border-b-2 border-red-900 text-sm font-bold">
+            DIR: /HOME/SAMARSINGH/PICTURES
           </div>
-          <div className="flex-1 min-h-0 overflow-y-auto">
-            {IMAGES.map((image, index) => (
-              <button
-                key={image.id}
-                type="button"
-                onClick={() => openImage(index)}
-                className="w-full px-4 py-2 text-left border-b border-neutral-900 hover:bg-neutral-950"
-              >
-                {image.fileName}
-              </button>
-            ))}
+          <div className="flex-1 min-h-0 overflow-y-auto p-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+              {IMAGES.map((image, index) => (
+                <button
+                  key={image.id}
+                  type="button"
+                  onClick={() => openImage(index)}
+                  className="flex flex-col items-center p-2 border-2 border-gray-800 hover:border-red-500 bg-black transition-colors"
+                >
+                  <div className="w-full aspect-square bg-gray-900 border border-gray-700 mb-2 overflow-hidden flex items-center justify-center">
+                    <img
+                      src={image.src}
+                      alt={image.alt}
+                      className="w-full h-full object-cover opacity-70 hover:opacity-100"
+                      style={{ imageRendering: 'pixelated' }}
+                    />
+                  </div>
+                  <span className="text-xs truncate w-full text-center">{image.fileName}</span>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       )}

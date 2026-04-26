@@ -5,21 +5,21 @@ import { AVAILABLE_COMMANDS, createCommandMap, executeCommand } from './terminal
 
 const HOME_DIRECTORY = '/home/samarsingh'
 const SSH_USER = 'samarsingh'
-const TYPE_CHAR_DELAY_MS = 8
-const EXECUTION_DELAY_MS = 120
-const LINE_GAP_MS = 14
+const TYPE_CHAR_DELAY_MS = 3
+const EXECUTION_DELAY_MS = 30
+const LINE_GAP_MS = 8
 const PROMPT_USER_COLOR = '#00ff88'
 
-/** Typing jitter: ±2ms around base (keeps steps in 6–10ms range when base is 8) */
+/** Typing jitter: ±1ms around base (keeps steps in 2-4ms range when base is 3) */
 const charDelayWithJitter = (baseMs, stepIndex) => {
-  const jitter = ((stepIndex * 7 + 3) % 5) - 2
-  return Math.max(6, Math.min(10, baseMs + jitter))
+  const jitter = ((stepIndex * 7 + 3) % 3) - 1
+  return Math.max(2, Math.min(4, baseMs + jitter))
 }
 
-const LONG_LINE_CHUNK_THRESHOLD = 100
+const LONG_LINE_CHUNK_THRESHOLD = 120
 const getTypingChunkSize = (lineLength) => {
-  if (lineLength > 200) return 6
-  if (lineLength > LONG_LINE_CHUNK_THRESHOLD) return 4
+  if (lineLength > 240) return 8
+  if (lineLength > LONG_LINE_CHUNK_THRESHOLD) return 5
   return 1
 }
 
@@ -106,7 +106,7 @@ const TerminalHistory = memo(function TerminalHistory({ entries }) {
   )
 })
 
-const Terminal = () => {
+const Terminal = ({ onExit, isTerminalOpen }) => {
   const { openApp, closeApp, activeApp } = useLayout()
 
   const [mode, setMode] = useState('ssh') // 'ssh' | 'boot' | 'terminal'
@@ -142,6 +142,17 @@ const Terminal = () => {
   const bootGenRef = useRef(0)
   const modeRef = useRef(mode)
   modeRef.current = mode
+
+  // Auto-focus input when terminal opens
+  useEffect(() => {
+    if (isTerminalOpen && mode === 'terminal') {
+      // Focus immediately after render
+      const timer = setTimeout(() => {
+        inputRef.current?.focus()
+      }, 0)
+      return () => clearTimeout(timer)
+    }
+  }, [isTerminalOpen, mode])
 
   const lastLoginDisplay = useMemo(() => {
     const d = new Date()
@@ -200,7 +211,14 @@ const Terminal = () => {
       } = {}
     ) => {
       if (markBusy) setIsCommandRunning(true)
-      let delay = execDelayMs
+      
+      // Dynamic delay based on output size
+      const totalChars = lines.join('').length
+      const isShortOutput = totalChars < 100
+      const dynamicExecDelay = isShortOutput ? 10 : execDelayMs
+      const dynamicCharDelay = isShortOutput ? 2 : charDelayMs
+      
+      let delay = dynamicExecDelay
 
       lines.forEach((line) => {
         if (line === '') {
@@ -227,7 +245,7 @@ const Terminal = () => {
         while (pos < line.length) {
           const nextPos = Math.min(pos + chunkSize, line.length)
           stepIndex += 1
-          localDelay += charDelayWithJitter(charDelayMs, stepIndex)
+          localDelay += charDelayWithJitter(dynamicCharDelay, stepIndex)
           const textValue = line.slice(0, nextPos)
           pos = nextPos
           const charTimer = setTimeout(() => {
@@ -246,7 +264,7 @@ const Terminal = () => {
         if (markBusy) setIsCommandRunning(false)
         onComplete?.()
         outputTimersRef.current = outputTimersRef.current.filter((id) => id !== doneTimer)
-      }, delay > execDelayMs ? delay - lineGapMs : delay)
+      }, delay > dynamicExecDelay ? delay - lineGapMs : delay)
       outputTimersRef.current.push(doneTimer)
     },
     [pushEntry, updateOutputEntry]
@@ -558,24 +576,6 @@ const Terminal = () => {
         return
       }
 
-      if (event.key === 'ArrowUp' && showSuggestions && suggestions.length > 0) {
-        event.preventDefault()
-        const nextIndex = suggestionIndex <= 0 ? suggestions.length - 1 : suggestionIndex - 1
-        setSuggestionIndex(nextIndex)
-        setInput(suggestions[nextIndex])
-        setCursorPosition(suggestions[nextIndex].length)
-        return
-      }
-
-      if (event.key === 'ArrowDown' && showSuggestions && suggestions.length > 0) {
-        event.preventDefault()
-        const nextIndex = (suggestionIndex + 1) % suggestions.length
-        setSuggestionIndex(nextIndex)
-        setInput(suggestions[nextIndex])
-        setCursorPosition(suggestions[nextIndex].length)
-        return
-      }
-
       if (event.key === 'Escape') {
         setShowSuggestions(false)
         return
@@ -627,6 +627,19 @@ const Terminal = () => {
           return
         }
 
+        if (trimmedInput.toLowerCase() === 'exit') {
+          clearOutputTimers()
+          pushEntry({ type: 'input', value: rawInput, pathLabel: promptPath })
+          pushEntry({ type: 'output', value: 'logout\nsession closed' })
+          setInput('')
+          setCursorPosition(0)
+          // Notify parent to show desktop
+          if (onExit) {
+            setTimeout(() => onExit(), 500)
+          }
+          return
+        }
+
         pushEntry({ type: 'input', value: rawInput, pathLabel: promptPath })
         setInput('')
         setCursorPosition(0)
@@ -673,6 +686,17 @@ const Terminal = () => {
         if (commandResult.type === 'app') {
           setAttachedProcessPid(pid)
           pushEntry({ type: 'output', value: `[${pid}] running ${trimmedInput}` })
+        } else if (commandResult.content === '__EXIT__') {
+          pushEntry({ type: 'output', value: 'logout\nsession closed' })
+          setProcesses((prev) => prev.map((item) => (
+            item.pid === pid ? { ...item, status: 'terminated' } : item
+          )))
+          setActiveProcess(null)
+          setAttachedProcessPid(null)
+          // Notify parent to show desktop
+          if (onExit) {
+            setTimeout(() => onExit(), 500)
+          }
         } else if (commandResult.isError) {
           const outputLines = commandResult.content.split('\n')
           outputLines.forEach((line) => {
@@ -701,7 +725,10 @@ const Terminal = () => {
 
       if (event.key === 'ArrowUp') {
         event.preventDefault()
-        if (commandHistory.length > 0 && historyIndex < commandHistory.length - 1) {
+        if (showSuggestions && suggestions.length > 0) {
+          const nextIndex = suggestionIndex <= 0 ? suggestions.length - 1 : suggestionIndex - 1
+          setSuggestionIndex(nextIndex)
+        } else if (commandHistory.length > 0 && historyIndex < commandHistory.length - 1) {
           const nextIndex = historyIndex + 1
           setHistoryIndex(nextIndex)
           const cmd = commandHistory[commandHistory.length - 1 - nextIndex]
@@ -713,7 +740,10 @@ const Terminal = () => {
 
       if (event.key === 'ArrowDown') {
         event.preventDefault()
-        if (historyIndex > 0) {
+        if (showSuggestions && suggestions.length > 0) {
+          const nextIndex = (suggestionIndex + 1) % suggestions.length
+          setSuggestionIndex(nextIndex)
+        } else if (historyIndex > 0) {
           const nextIndex = historyIndex - 1
           setHistoryIndex(nextIndex)
           const cmd = commandHistory[commandHistory.length - 1 - nextIndex]
@@ -724,6 +754,7 @@ const Terminal = () => {
           setInput('')
           setCursorPosition(0)
         }
+        return
       }
     },
     [
@@ -821,12 +852,21 @@ const Terminal = () => {
                 autoComplete="off"
               />
               {showSuggestions && suggestions.length > 0 && (
-                <div className="terminal-scroll-hidden absolute top-full left-0 z-20 mt-1 max-h-40 min-w-[12rem] overflow-y-auto border border-neutral-800 bg-black shadow-lg">
+                <div className="absolute top-full left-0 z-20 mt-0 max-h-40 min-w-[12rem] overflow-y-auto border border-red-500 bg-black">
                   {suggestions.map((suggestion, index) => (
                     <div
                       key={suggestion}
-                      className={`cursor-pointer px-3 py-1.5 text-xs font-mono transition-colors ${
-                        index === suggestionIndex ? 'bg-red-600 text-white font-bold' : 'text-gray-300 hover:bg-neutral-900'
+                      onMouseDown={(e) => {
+                        e.preventDefault() // prevent input blur
+                        setInput(suggestion)
+                        setCursorPosition(suggestion.length)
+                        setShowSuggestions(false)
+                        
+                        // Fake enter key press to execute immediately
+                        handleKeyDown({ key: 'Enter', preventDefault: () => {} })
+                      }}
+                      className={`cursor-pointer px-2 py-1 text-xs font-mono ${
+                        index === suggestionIndex ? 'bg-red-500 text-black font-bold' : 'text-red-500 bg-black hover:bg-red-900 hover:text-white'
                       }`}
                     >
                       {suggestion}

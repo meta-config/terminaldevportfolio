@@ -6,6 +6,7 @@ import SnakeGame from '../apps/SnakeGame'
 import TicTacToe from '../apps/TicTacToe'
 import FlappyBird from '../apps/FlappyBird'
 import NumberGuessingGame from '../apps/NumberGuessingGame'
+import DinoGame from '../apps/DinoGame'
 
 const APP_REGISTRY = {
   about: {
@@ -175,6 +176,12 @@ const APP_REGISTRY = {
     title: 'Number Guessing',
     component: ({ onClose }) => (
       <NumberGuessingGame onClose={onClose} />
+    )
+  },
+  dino: {
+    title: 'Dino Game',
+    component: ({ onClose }) => (
+      <DinoGame onClose={onClose} />
     )
   }
 }
