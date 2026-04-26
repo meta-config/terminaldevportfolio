@@ -1,24 +1,12 @@
 import { useLayout } from '../layout'
 import AppPanel from './AppPanel'
 import ResumeApp from '../apps/ResumeApp'
-import BrowserViewer from '../apps/BrowserViewer'
 import PicturesApp from '../apps/PicturesApp'
 import SnakeGame from '../apps/SnakeGame'
 import TicTacToe from '../apps/TicTacToe'
 import FlappyBird from '../apps/FlappyBird'
 import NumberGuessingGame from '../apps/NumberGuessingGame'
 
-// URL configurations
-const URLS = {
-  github: 'https://github.com/meta-config',
-  linkedin: 'https://www.linkedin.com/in/samarsingh1/',
-  instagram: 'https://www.instagram.com/smr.ext/?hl=en',
-  leetcode: 'https://leetcode.com/u/meta-config-smr/',
-  codeforces: 'https://codeforces.com/profile/meta.config.smr',
-  codolio: 'https://codolio.com/profile/meta.config.smr'
-}
-
-// App registry - define your apps here
 const APP_REGISTRY = {
   about: {
     title: 'About',
@@ -158,66 +146,7 @@ const APP_REGISTRY = {
       />
     )
   },
-  github: {
-    title: 'GitHub',
-    component: ({ onClose }) => (
-      <BrowserViewer 
-        url={URLS.github} 
-        title="GitHub - meta-config"
-        onClose={onClose}
-      />
-    )
-  },
-  linkedin: {
-    title: 'LinkedIn',
-    component: ({ onClose }) => (
-      <BrowserViewer 
-        url={URLS.linkedin} 
-        title="LinkedIn - Samar Singh"
-        onClose={onClose}
-      />
-    )
-  },
-  instagram: {
-    title: 'Instagram',
-    component: ({ onClose }) => (
-      <BrowserViewer 
-        url={URLS.instagram} 
-        title="Instagram - @smr.ext"
-        onClose={onClose}
-      />
-    )
-  },
-  leetcode: {
-    title: 'LeetCode',
-    component: ({ onClose }) => (
-      <BrowserViewer 
-        url={URLS.leetcode} 
-        title="LeetCode - meta-config-smr"
-        onClose={onClose}
-      />
-    )
-  },
-  codeforces: {
-    title: 'Codeforces',
-    component: ({ onClose }) => (
-      <BrowserViewer 
-        url={URLS.codeforces} 
-        title="Codeforces - meta.config.smr"
-        onClose={onClose}
-      />
-    )
-  },
-  codolio: {
-    title: 'Codolio',
-    component: ({ onClose }) => (
-      <BrowserViewer 
-        url={URLS.codolio} 
-        title="Codolio - meta.config.smr"
-        onClose={onClose}
-      />
-    )
-  },
+
   pictures: {
     title: 'Pictures',
     component: ({ onClose }) => (

@@ -5,7 +5,7 @@ export const AVAILABLE_COMMANDS = [
   'whoami', 'clear', 'ls', 'cd', 'pwd', 'grep', 'ps', 'kill', 'man', 'apt', 'sudo hire-me'
 ]
 
-const text = (content) => ({ type: 'text', content })
+const text = (content, isError = false) => ({ type: 'text', content, isError })
 const app = (content) => ({ type: 'app', content })
 const HOME_DIRECTORY = '/home/samarsingh'
 const FILE_SYSTEM = {
@@ -200,28 +200,28 @@ export const createCommandMap = (openApp) => ({
     return app('Opening guess...')
   },
   github: () => {
-    openApp('github')
-    return app('Opening github...')
+    window.open('https://github.com/meta-config', '_blank')
+    return text('Opening GitHub in a new tab...\n')
   },
   linkedin: () => {
-    openApp('linkedin')
-    return app('Opening linkedin...')
+    window.open('https://www.linkedin.com/in/samarsingh1/', '_blank')
+    return text('Opening LinkedIn in a new tab...\n')
   },
   instagram: () => {
-    openApp('instagram')
-    return app('Opening instagram...')
+    window.open('https://www.instagram.com/smr.ext/?hl=en', '_blank')
+    return text('Opening Instagram in a new tab...\n')
   },
   leetcode: () => {
-    openApp('leetcode')
-    return app('Opening leetcode...')
+    window.open('https://leetcode.com/u/meta-config-smr/', '_blank')
+    return text('Opening LeetCode in a new tab...\n')
   },
   codeforces: () => {
-    openApp('codeforces')
-    return app('Opening codeforces...')
+    window.open('https://codeforces.com/profile/meta.config.smr', '_blank')
+    return text('Opening Codeforces in a new tab...\n')
   },
   codolio: () => {
-    openApp('codolio')
-    return app('Opening codolio...')
+    window.open('https://codolio.com/profile/meta.config.smr', '_blank')
+    return text('Opening Codolio in a new tab...\n')
   },
   resume: () => {
     openApp('resume')
@@ -253,7 +253,7 @@ export const executeCommand = (input, commandMap, context = {}) => {
 
     if (grepMatch) {
       if (!pipedLines) {
-        return text('grep: no input to filter\n')
+        return text('grep: no input to filter\n', true)
       }
 
       const keyword = grepMatch[1].trim().toLowerCase()
@@ -272,7 +272,7 @@ export const executeCommand = (input, commandMap, context = {}) => {
     if (commandName === 'ls') {
       const entries = getDirectoryEntries(currentDirectory)
       if (!entries) {
-        result = text('ls: cannot access current directory\n')
+        result = text('ls: cannot access current directory\n', true)
       } else {
         result = text(`${entries.map((entry) => `${entry}/`).join('  ')}\n`)
       }
@@ -283,7 +283,7 @@ export const executeCommand = (input, commandMap, context = {}) => {
       const resolvedPath = resolvePath(currentDirectory, target)
       const targetEntries = getDirectoryEntries(resolvedPath)
       if (!targetEntries) {
-        result = text(`cd: no such file or directory: ${target || '~'}\n`)
+        result = text(`cd: no such file or directory: ${target || '~'}\n`, true)
       } else {
         if (typeof setCurrentDirectory === 'function') {
           setCurrentDirectory(resolvedPath)
@@ -297,20 +297,20 @@ export const executeCommand = (input, commandMap, context = {}) => {
     } else if (commandName === 'kill') {
       const targetPid = Number(args[0])
       if (!Number.isFinite(targetPid)) {
-        result = text('kill: usage: kill <pid>\n')
+        result = text('kill: usage: kill <pid>\n', true)
       } else if (typeof terminateProcessByPid !== 'function') {
-        result = text(`kill: failed to terminate ${targetPid}\n`)
+        result = text(`kill: failed to terminate ${targetPid}\n`, true)
       } else {
         const didTerminate = terminateProcessByPid(targetPid)
-        result = text(didTerminate ? `[${targetPid}] terminated\n` : `kill: (${targetPid}) - no such process\n`)
+        result = didTerminate ? text(`[${targetPid}] terminated\n`) : text(`kill: (${targetPid}) - no such process\n`, true)
       }
     } else if (commandName === 'man') {
       const subject = (args[0] || '').toLowerCase()
       const page = MAN_PAGES[subject]
       if (!subject) {
-        result = text('man: missing command name\n')
+        result = text('man: missing command name\n', true)
       } else if (!page) {
-        result = text(`No manual entry for ${subject}\n`)
+        result = text(`No manual entry for ${subject}\n`, true)
       } else {
         result = text(
           'NAME\n' +
@@ -321,11 +321,11 @@ export const executeCommand = (input, commandMap, context = {}) => {
       }
     } else if (commandName === 'apt') {
       if (args[0] !== 'install' || !args[1]) {
-        result = text('Usage: apt install <package>\n')
+        result = text('Usage: apt install <package>\n', true)
       } else {
         const pkg = args[1].toLowerCase()
         if (!APT_PACKAGES.has(pkg)) {
-          result = text(`E: Unable to locate package ${pkg}\n`)
+          result = text(`E: Unable to locate package ${pkg}\n`, true)
         } else {
           result = text(
             'Reading package lists...\n' +
@@ -337,12 +337,12 @@ export const executeCommand = (input, commandMap, context = {}) => {
       }
     } else {
       const handler = commandMap[normalized]
-      result = handler ? handler() : text(`command not found: ${normalized}\n`)
+      result = handler ? handler() : text(`command not found: ${normalized}\n`, true)
     }
 
     if (result.type === 'app') {
       if (index < segments.length - 1) {
-        return text('pipe error: cannot pipe app command output\n')
+        return text('pipe error: cannot pipe app command output\n', true)
       }
       return { ...result, pid }
     }

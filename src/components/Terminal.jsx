@@ -1,4 +1,4 @@
-import { memo, useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { memo, useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect } from 'react'
 import TerminalHeader from './TerminalHeader'
 import { useLayout } from '../layout'
 import { AVAILABLE_COMMANDS, createCommandMap, executeCommand } from './terminalCommands'
@@ -7,26 +7,26 @@ const HOME_DIRECTORY = '/home/samarsingh'
 const SSH_USER = 'samarsingh'
 const TYPE_CHAR_DELAY_MS = 8
 const EXECUTION_DELAY_MS = 120
-const LINE_GAP_MS = 16
+const LINE_GAP_MS = 14
 const PROMPT_USER_COLOR = '#00ff88'
 
-/** Typing jitter: ±2ms around base (keeps steps in ~6–10ms range when base is 8) */
+/** Typing jitter: ±2ms around base (keeps steps in 6–10ms range when base is 8) */
 const charDelayWithJitter = (baseMs, stepIndex) => {
-  const jitter = ((stepIndex % 3) - 1) * 2
+  const jitter = ((stepIndex * 7 + 3) % 5) - 2
   return Math.max(6, Math.min(10, baseMs + jitter))
 }
 
-const LONG_LINE_CHUNK_THRESHOLD = 96
+const LONG_LINE_CHUNK_THRESHOLD = 100
 const getTypingChunkSize = (lineLength) => {
-  if (lineLength > 180) return 5
-  if (lineLength > LONG_LINE_CHUNK_THRESHOLD) return 3
+  if (lineLength > 200) return 6
+  if (lineLength > LONG_LINE_CHUNK_THRESHOLD) return 4
   return 1
 }
 
 /** SSH scripted intro: snappy but still readable */
-const SSH_TYPE_CHAR_MS = 8
-const SSH_LINE_GAP_MS = 72
-const SSH_EXEC_MS = 72
+const SSH_TYPE_CHAR_MS = 6
+const SSH_LINE_GAP_MS = 60
+const SSH_EXEC_MS = 60
 
 const SSH_CONNECT_LINES = [
   'Connecting to samarsingh@portfolio...',
@@ -79,6 +79,8 @@ const renderOutputLine = (line, key) => {
 }
 
 const TerminalHistory = memo(function TerminalHistory({ entries }) {
+  const lastEntryId = entries.length > 0 ? entries[entries.length - 1].id : 0
+
   return (
     <div className="w-full min-w-0">
       {entries.map((entry) => {
@@ -94,7 +96,11 @@ const TerminalHistory = memo(function TerminalHistory({ entries }) {
           )
         }
 
-        return renderOutputLine(entry.value, entry.id)
+        return (
+          <div key={entry.id} className="terminal-output-line">
+            {renderOutputLine(entry.value, entry.id)}
+          </div>
+        )
       })}
     </div>
   )
@@ -179,7 +185,7 @@ const Terminal = () => {
     cursorBlinkTimerRef.current = setTimeout(() => {
       cursorBlinkTimerRef.current = null
       setCursorBlinkSolid(false)
-    }, 400)
+    }, 350)
   }, [])
 
   const typeOutputLines = useCallback(
@@ -225,7 +231,9 @@ const Terminal = () => {
           const textValue = line.slice(0, nextPos)
           pos = nextPos
           const charTimer = setTimeout(() => {
-            updateOutputEntry(entryId, textValue)
+            requestAnimationFrame(() => {
+              updateOutputEntry(entryId, textValue)
+            })
             outputTimersRef.current = outputTimersRef.current.filter((id) => id !== charTimer)
           }, localDelay)
           outputTimersRef.current.push(charTimer)
@@ -238,7 +246,7 @@ const Terminal = () => {
         if (markBusy) setIsCommandRunning(false)
         onComplete?.()
         outputTimersRef.current = outputTimersRef.current.filter((id) => id !== doneTimer)
-      }, delay)
+      }, delay > execDelayMs ? delay - lineGapMs : delay)
       outputTimersRef.current.push(doneTimer)
     },
     [pushEntry, updateOutputEntry]
@@ -246,10 +254,10 @@ const Terminal = () => {
 
   typeOutputLinesRef.current = typeOutputLines
 
-  /** Boot: full lines instantly, staggered 80–150ms (no per-character typing) */
+  /** Boot: full lines instantly, staggered 70–130ms (no per-character typing) */
   const scheduleBootOutputLines = useCallback(
     (lines, onComplete) => {
-      let lineStart = 55
+      let lineStart = 50
       lines.forEach((line, i) => {
         const at = lineStart
         const timer = setTimeout(() => {
@@ -257,12 +265,12 @@ const Terminal = () => {
           outputTimersRef.current = outputTimersRef.current.filter((id) => id !== timer)
         }, at)
         outputTimersRef.current.push(timer)
-        if (i < lines.length - 1) lineStart += 80 + Math.floor(Math.random() * 71)
+        if (i < lines.length - 1) lineStart += 70 + Math.floor(Math.random() * 61)
       })
       const doneTimer = setTimeout(() => {
         onComplete?.()
         outputTimersRef.current = outputTimersRef.current.filter((id) => id !== doneTimer)
-      }, lineStart + 100)
+      }, lineStart + 80)
       outputTimersRef.current.push(doneTimer)
     },
     [pushEntry]
@@ -318,7 +326,7 @@ const Terminal = () => {
     sshAutoBootTimerRef.current = setTimeout(() => {
       sshAutoBootTimerRef.current = null
       setMode((m) => (m === 'ssh' ? 'boot' : m))
-    }, 2000)
+    }, 1500)
   }, [clearOutputTimers, lastLoginDisplay, SSH_LOGIN_DISPLAY_LINES])
 
   const sshPhaseRef = useRef(sshPhase)
@@ -352,7 +360,7 @@ const Terminal = () => {
       sshAutoBootTimerRef.current = setTimeout(() => {
         sshAutoBootTimerRef.current = null
         setMode((m) => (m === 'ssh' ? 'boot' : m))
-      }, 2000)
+      }, 1500)
     }
 
     const afterConnect = () => {
@@ -418,11 +426,12 @@ const Terminal = () => {
     }
   }, [mode, clearOutputTimers, scheduleBootOutputLines])
 
-  useEffect(() => {
+  // Optimized auto-scroll: instant, no animation delay
+  useLayoutEffect(() => {
     if (outputRef.current) {
-      outputRef.current.scrollTo({ top: outputRef.current.scrollHeight, behavior: 'auto' })
+      outputRef.current.scrollTop = outputRef.current.scrollHeight
     }
-  }, [entries, input, mode, sshPhase, cursorPosition])
+  }, [entries])
 
   useEffect(() => {
     if (mode !== 'terminal' || isInputGloballyBlocked) return
@@ -539,10 +548,10 @@ const Terminal = () => {
           setCursorPosition(suggestions[0].length)
           setShowSuggestions(false)
         } else if (showSuggestions && suggestions.length > 0) {
-          const nextIndex = (suggestionIndex + 1) % suggestions.length
-          setSuggestionIndex(nextIndex)
-          setInput(suggestions[nextIndex])
-          setCursorPosition(suggestions[nextIndex].length)
+          const selected = suggestions[suggestionIndex]
+          setInput(selected)
+          setCursorPosition(selected.length)
+          setShowSuggestions(false)
         } else {
           handleTabComplete()
         }
@@ -585,17 +594,18 @@ const Terminal = () => {
       }
 
       if (event.key === 'Enter') {
+        let rawInput = input
         if (showSuggestions && suggestions.length > 0) {
           event.preventDefault()
           const selected = suggestions[suggestionIndex]
           setInput(selected)
           setCursorPosition(selected.length)
           setShowSuggestions(false)
-          return
+          rawInput = selected
+        } else {
+          setShowSuggestions(false)
         }
 
-        setShowSuggestions(false)
-        const rawInput = input
         const trimmedInput = rawInput.trim()
 
         if (trimmedInput === '') {
@@ -663,6 +673,16 @@ const Terminal = () => {
         if (commandResult.type === 'app') {
           setAttachedProcessPid(pid)
           pushEntry({ type: 'output', value: `[${pid}] running ${trimmedInput}` })
+        } else if (commandResult.isError) {
+          const outputLines = commandResult.content.split('\n')
+          outputLines.forEach((line) => {
+            if (line.trim() !== '') pushEntry({ type: 'output', value: line })
+          })
+          setProcesses((prev) => prev.map((item) => (
+            item.pid === pid ? { ...item, status: 'terminated' } : item
+          )))
+          setActiveProcess(null)
+          setAttachedProcessPid(null)
         } else {
           setIsCommandRunning(true)
           const outputLines = commandResult.content.split('\n')
@@ -761,7 +781,7 @@ const Terminal = () => {
         <div
           ref={outputRef}
           className="terminal-scroll-hidden min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-3 pt-3 sm:px-4 sm:pt-4"
-          style={{ scrollBehavior: 'auto' }}
+          style={{ scrollBehavior: 'instant' }}
         >
           <TerminalHistory entries={entries} />
 
@@ -773,17 +793,18 @@ const Terminal = () => {
                 <span className="text-blue-400">:{promptPath}</span>
                 <span className="text-red-400">$&nbsp;</span>
                 {showCursor ? (
-                  <>
-                    <span className="break-all text-white">{input.slice(0, cursorPosition)}</span>
+                  <span className="whitespace-pre-wrap break-all text-white">
+                    {input.slice(0, cursorPosition)}
                     <span
                       ref={cursorRef}
-                      className={`pointer-events-none inline-block h-[1.1em] w-0.5 shrink-0 bg-red-500 align-baseline ${
+                      className={`pointer-events-none inline-block h-[1.1em] w-[0.6em] shrink-0 bg-red-500 ${
                         cursorBlinkSolid ? 'terminal-input-cursor--solid' : 'terminal-input-cursor'
                       }`}
+                      style={{ verticalAlign: 'text-bottom' }}
                       aria-hidden
                     />
-                    <span className="break-all text-white">{input.slice(cursorPosition)}</span>
-                  </>
+                    {input.slice(cursorPosition)}
+                  </span>
                 ) : (
                   <span className="break-all text-white">{input}</span>
                 )}
@@ -800,12 +821,12 @@ const Terminal = () => {
                 autoComplete="off"
               />
               {showSuggestions && suggestions.length > 0 && (
-                <div className="terminal-scroll-hidden absolute bottom-full left-0 z-20 mb-1 max-h-40 min-w-[12rem] overflow-y-auto border border-neutral-700 bg-black">
+                <div className="terminal-scroll-hidden absolute top-full left-0 z-20 mt-1 max-h-40 min-w-[12rem] overflow-y-auto border border-neutral-800 bg-black shadow-lg">
                   {suggestions.map((suggestion, index) => (
                     <div
                       key={suggestion}
-                      className={`cursor-pointer border-b border-neutral-900 px-2 py-1 text-xs last:border-b-0 ${
-                        index === suggestionIndex ? 'bg-red-900 text-white' : 'text-gray-300'
+                      className={`cursor-pointer px-3 py-1.5 text-xs font-mono transition-colors ${
+                        index === suggestionIndex ? 'bg-red-600 text-white font-bold' : 'text-gray-300 hover:bg-neutral-900'
                       }`}
                     >
                       {suggestion}

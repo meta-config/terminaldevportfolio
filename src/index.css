@@ -97,6 +97,23 @@ body,
   opacity: 1;
 }
 
+/* Subtle fade-in for new output lines - barely noticeable */
+@keyframes terminal-line-appear {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.terminal-output-line {
+  animation: terminal-line-appear 120ms ease-out;
+  will-change: opacity, transform;
+}
+
 .terminal-scroll-hidden {
   -ms-overflow-style: none;
   scrollbar-width: none;
@@ -120,7 +137,8 @@ body,
 
   .terminal-input-cursor,
   .terminal-input-cursor--solid,
-  .terminal-boot-caret {
+  .terminal-boot-caret,
+  .terminal-output-line {
     animation: none;
     opacity: 1;
   }
