@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 
 const IMAGES = [
   { id: 1, fileName: 'picture1.jpg', src: '/images/picture1.jpg', alt: 'picture1.jpg' },
-  { id: 2, fileName: 'picture2.jpg', src: '/images/picture2.jpg', alt: 'picture2.jpg' },
+  { id: 2, fileName: 'picture2.jpg', src: '/images/picture2.jpg', alt: 'picture2.jpg' },git
   { id: 3, fileName: 'picture3.jpg', src: '/images/picture3.jpg', alt: 'picture3.jpg' },
   { id: 4, fileName: 'picture4.jpg', src: '/images/picture4.jpg', alt: 'picture4.jpg' },
   { id: 5, fileName: 'picture5.jpg', src: '/images/picture5.jpg', alt: 'picture5.jpg' },
