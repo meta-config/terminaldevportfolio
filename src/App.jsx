@@ -74,6 +74,35 @@ function App() {
 
   return (
     <LayoutProvider onSetActiveApp={handleSetActiveApp}>
+      {/* Hidden SEO content for crawlers - visible to DOM but not users */}
+      <div id="seo-content" style={{ position: 'absolute', left: '-9999px', width: '1px', height: '1px', overflow: 'hidden' }}>
+        <h1>Samar Singh - Software Developer & AI-ML Engineer</h1>
+        <p>About: Samar Singh is an aspiring software developer and AI-ML student with strong foundations in programming, data structures, and system design. He builds scalable and efficient solutions and has experience developing real-world projects. This interactive linux terminal portfolio showcases his technical skills and creative approach to developer portfolio design.</p>
+        
+        <h2>Technical Skills</h2>
+        <ul>
+          <li>Languages: C, C++, Python, JavaScript</li>
+          <li>Frontend: React, HTML, CSS, TailwindCSS</li>
+          <li>Backend: Node.js</li>
+          <li>Data/AI: NumPy, Pandas, TensorFlow, Scikit-learn, Matplotlib</li>
+          <li>Tools: Git, GitHub, Docker, Redis, Kubernetes</li>
+          <li>Core: DSA, OS, CN, DBMS, System Design, LLM</li>
+          <li>Other: Linux, Linux commands, Web hosting</li>
+        </ul>
+        
+        <h2>Projects</h2>
+        <p>ThaiTourDMC - Tours and travel website built with HTML, CSS, Tailwind, and React. Live at https://thaitourdmc.com</p>
+        <p>PortfolioOS - An interactive linux terminal portfolio built with React and Vite, featuring games, document viewers, and a simulated Linux environment.</p>
+        
+        <h2>Contact</h2>
+        <p>Email: meta.config.smr@gmail.com</p>
+        <p>Phone: +91 8467098054</p>
+        <p>Location: India</p>
+        <p>GitHub: https://github.com/meta-config</p>
+        <p>LinkedIn: https://www.linkedin.com/in/samarsingh1/</p>
+        <p>LeetCode: https://leetcode.com/u/meta-config-smr/</p>
+      </div>
+      
       <div className="w-screen h-screen overflow-hidden relative bg-black">
         <Desktop onOpenTerminal={handleOpenTerminal} />
 

@@ -484,42 +484,25 @@ const Terminal = ({ onExit, isTerminalOpen }) => {
       event.preventDefault()
 
       if (mode !== 'terminal') {
-        pushEntry({ type: 'output', value: '^C' })
-        return
+        return // Do nothing outside terminal mode
       }
 
       if (activeApp) {
         closeApp()
-        pushEntry({ type: 'output', value: '^C' })
-        pushEntry({ type: 'output', value: 'Process terminated' })
+        pushEntry({ type: 'output', value: '^C Process terminated' })
         requestAnimationFrame(() => {
           inputRef.current?.focus()
         })
         return
       }
 
-      if (activeProcess) {
-        const pid = activeProcess.pid
-        setProcesses((prev) => prev.map((process) => (
-          process.pid === pid ? { ...process, status: 'terminated' } : process
-        )))
-        setActiveProcess(null)
-        setAttachedProcessPid(null)
-        setIsCommandRunning(false)
-
-        suppressCloseMessageRef.current = true
-        if (activeApp) closeApp()
-
-        pushEntry({ type: 'output', value: '^C' })
-        pushEntry({ type: 'output', value: `[${pid}] terminated` })
-      } else {
-        pushEntry({ type: 'output', value: '^C' })
-      }
+      // No app running - do nothing (just prevent default)
+      // Don't print ^C when there's nothing to kill
     }
 
     window.addEventListener('keydown', handleGlobalInterrupt)
     return () => window.removeEventListener('keydown', handleGlobalInterrupt)
-  }, [activeApp, activeProcess, closeApp, mode, pushEntry])
+  }, [activeApp, closeApp, mode, pushEntry])
 
   useEffect(() => () => {
     clearOutputTimers()
@@ -650,6 +633,7 @@ const Terminal = ({ onExit, isTerminalOpen }) => {
             return
           }
           
+          // No app running - close terminal and return to desktop
           pushEntry({ type: 'output', value: 'logout\nsession closed' })
           setInput('')
           setCursorPosition(0)

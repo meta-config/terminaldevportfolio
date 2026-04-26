@@ -23,6 +23,7 @@ const DinoGame = ({ onClose }) => {
   const scoreRef = useRef(0)
   const gameLoopRef = useRef(null)
   const frameCountRef = useRef(0)
+  const gameOverRef = useRef(false)
 
   const resetGame = useCallback(() => {
     dinoRef.current = { x: 50, y: GROUND_Y, velocity: 0, jumping: false }
@@ -32,10 +33,11 @@ const DinoGame = ({ onClose }) => {
     frameCountRef.current = 0
     setGameOver(false)
     setScore(0)
+    gameOverRef.current = false
   }, [])
 
   const jump = useCallback(() => {
-    if (gameOver) {
+    if (gameOverRef.current) {
       resetGame()
       setGameStarted(true)
       return
@@ -45,7 +47,7 @@ const DinoGame = ({ onClose }) => {
       dinoRef.current.velocity = JUMP_FORCE
       dinoRef.current.jumping = true
     }
-  }, [gameOver, resetGame])
+  }, [resetGame])
 
   // Game loop
   useEffect(() => {
@@ -55,8 +57,12 @@ const DinoGame = ({ onClose }) => {
     if (!canvas) return
 
     const ctx = canvas.getContext('2d')
+    let animationId
 
     const gameLoop = () => {
+      // Check if game is over from ref (more reliable than state in loop)
+      if (gameOverRef.current) return
+
       // Clear canvas
       ctx.fillStyle = '#000000'
       ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT)
@@ -97,12 +103,22 @@ const DinoGame = ({ onClose }) => {
           dino.x < obs.x + obs.width &&
           dino.y + 40 > obs.y
         ) {
+          gameOverRef.current = true
           setGameOver(true)
           const finalScore = scoreRef.current
           if (finalScore > highScore) {
             setHighScore(finalScore)
             localStorage.setItem('dino-high-score', finalScore.toString())
           }
+          // Draw final frame
+          ctx.fillStyle = '#ffffff'
+          ctx.fillRect(dino.x, dino.y, 30, 40)
+          ctx.fillStyle = '#000000'
+          ctx.fillRect(dino.x + 20, dino.y + 5, 5, 5)
+          ctx.fillStyle = '#ffffff'
+          obstaclesRef.current.forEach(obs => {
+            ctx.fillRect(obs.x, obs.y, obs.width, obs.height)
+          })
           return
         }
       }
@@ -139,53 +155,53 @@ const DinoGame = ({ onClose }) => {
         ctx.fillRect(obs.x, obs.y, obs.width, obs.height)
       })
 
-      if (!gameOver) {
-        gameLoopRef.current = requestAnimationFrame(gameLoop)
-      }
+      // Continue game loop
+      animationId = requestAnimationFrame(gameLoop)
     }
 
-    gameLoopRef.current = requestAnimationFrame(gameLoop)
+    animationId = requestAnimationFrame(gameLoop)
 
+    // Cleanup on unmount
     return () => {
-      if (gameLoopRef.current) {
-        cancelAnimationFrame(gameLoopRef.current)
+      if (animationId) {
+        cancelAnimationFrame(animationId)
       }
+      gameLoopRef.current = null
     }
-  }, [gameStarted, gameOver, highScore])
+  }, [gameStarted, highScore])
 
-  // Keyboard controls
+  // Keyboard controls (only jump, Ctrl+C is handled globally)
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === ' ' || e.key === 'ArrowUp') {
         e.preventDefault()
         jump()
       }
-      if (e.key === 'c' && e.ctrlKey) {
-        e.preventDefault()
-        onClose()
-      }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [jump, onClose])
+  }, [jump])
 
   return (
-    <div className="w-full h-full flex items-center justify-center bg-black font-mono">
-      <div className="flex flex-col items-center">
+    <div className="w-full h-full flex items-center justify-center bg-black font-mono relative">
+      <div className="flex flex-col items-center relative">
         {/* Score */}
-        <div className="flex justify-between items-center mb-2 px-2 text-green-500 text-sm">
+        <div className="flex justify-between items-center mb-2 px-2 text-green-500 text-sm w-full">
           <div>SCORE: {score.toString().padStart(5, '0')}</div>
           <div>HI: {highScore.toString().padStart(5, '0')}</div>
         </div>
 
-        {/* Game Canvas */}
-        <div className="border-2 border-green-700 bg-black p-1">
+        {/* Game Canvas Container */}
+        <div className="relative border-2 border-green-700 bg-black p-1">
           <canvas
             ref={canvasRef}
             width={CANVAS_WIDTH}
             height={CANVAS_HEIGHT}
-            onClick={jump}
+            onClick={() => {
+              if (!gameStarted) setGameStarted(true)
+              else jump()
+            }}
             className="block bg-black cursor-pointer"
             style={{ imageRendering: 'pixelated' }}
           />

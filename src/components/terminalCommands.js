@@ -104,6 +104,7 @@ export const createCommandMap = (openApp) => ({
     '  kill [pid]  - Terminate process by pid\n' +
     '  man [cmd]   - Show manual page for command\n' +
     '  apt install - Simulate package installation\n' +
+    '  sudo hire-me - Special hiring command\n' +
     '\n' +
     'File System Commands:\n' +
     '  ls          - List directory contents\n' +
@@ -113,8 +114,6 @@ export const createCommandMap = (openApp) => ({
     'Utilities:\n' +
     '  clear       - Clear terminal screen\n' +
     '  exit        - Close terminal session\n' +
-    '\n' +
-    '  \x1b[43m\x1b[30m sudo hire-me \x1b[0m - Special hiring command\n' +
     '\n' +
     'Tip: Use Tab for autocomplete, ↑↓ for history\n'
   ),

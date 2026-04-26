@@ -195,7 +195,7 @@ const AppContainer = () => {
 
   const appConfig = APP_REGISTRY[activeApp]
   const AppComponent = appConfig.component
-  const isGameApp = ['snake', 'tictactoe', 'flappy', 'guess'].includes(activeApp)
+  const isGameApp = ['snake', 'tictactoe', 'flappy', 'guess', 'dino'].includes(activeApp)
   const headerActions = isGameApp
     ? [{
         label: 'restart',
@@ -215,7 +215,7 @@ const AppContainer = () => {
         onClose={closeApp}
         headerActions={headerActions}
       >
-        <AppComponent />
+        <AppComponent onClose={closeApp} />
       </AppPanel>
     </div>
   )
