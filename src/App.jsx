@@ -6,41 +6,42 @@ import AppContainer from './components/AppContainer'
 import BootLoader from './components/BootLoader'
 
 function App() {
-  const [appState, setAppState] = useState('booting')
+  const [hasBooted, setHasBooted] = useState(false)
+  const [mainState, setMainState] = useState('desktop')
   const [windowState, setWindowState] = useState('desktop')
   const [activeApp, setActiveApp] = useState(null)
+  const [terminalVisible, setTerminalVisible] = useState(false)
   const animationTimerRef = useRef(null)
 
   const handleBootComplete = useCallback(() => {
-    setAppState('desktop')
+    setHasBooted(true)
+    setMainState('desktop')
   }, [])
 
   const handleOpenTerminal = useCallback(() => {
-    setAppState('terminal_opening')
+    setTerminalVisible(true)
+    setMainState('terminal')
     setWindowState('terminal_fullscreen')
     setActiveApp(null)
     if (animationTimerRef.current) clearTimeout(animationTimerRef.current)
-    animationTimerRef.current = setTimeout(() => {
-      setAppState('terminal_open')
-    }, 150)
   }, [])
 
   const handleCloseTerminal = useCallback(() => {
-    setAppState('terminal_closing')
+    setTerminalVisible(false)
     setActiveApp(null)
     if (animationTimerRef.current) clearTimeout(animationTimerRef.current)
     animationTimerRef.current = setTimeout(() => {
-      setAppState('desktop')
+      setMainState('desktop')
       setWindowState('desktop')
     }, 150)
   }, [])
 
   const handleMinimizeTerminal = useCallback(() => {
-    setAppState('terminal_closing')
+    setTerminalVisible(false)
     setActiveApp(null)
     if (animationTimerRef.current) clearTimeout(animationTimerRef.current)
     animationTimerRef.current = setTimeout(() => {
-      setAppState('desktop')
+      setMainState('desktop')
       setWindowState('desktop')
     }, 150)
   }, [])
@@ -65,11 +66,11 @@ function App() {
     }
   }, [])
 
-  if (appState === 'booting') {
+  if (!hasBooted) {
     return <BootLoader onComplete={handleBootComplete} />
   }
 
-  const showSplitLayout = appState !== 'desktop' && appState !== 'terminal_closing' && activeApp && windowState === 'terminal_fullscreen'
+  const showSplitLayout = mainState === 'terminal' && activeApp && windowState === 'terminal_fullscreen'
 
   return (
     <LayoutProvider onSetActiveApp={handleSetActiveApp}>
@@ -79,9 +80,6 @@ function App() {
         {showSplitLayout ? (
           <div className="absolute inset-0 flex flex-row">
             <div className="w-1/2 h-full">
-              <AppContainer />
-            </div>
-            <div className="w-1/2 h-full">
               <TerminalWindow
                 onClose={handleCloseTerminal}
                 onMinimize={handleMinimizeTerminal}
@@ -90,26 +88,32 @@ function App() {
                 isTerminalOpen={true}
               />
             </div>
+            <div className="w-1/2 h-full">
+              <AppContainer />
+            </div>
           </div>
         ) : (
           <div
             className={`absolute ${
-              appState === 'desktop' || appState === 'terminal_closing'
-                ? appState === 'terminal_closing'
+              mainState === 'desktop' || !terminalVisible
+                ? !terminalVisible
                   ? 'opacity-0 scale-95 pointer-events-none'
                   : 'opacity-0 scale-95 invisible pointer-events-none'
-                : appState === 'terminal_opening'
-                  ? 'opacity-0 scale-95'
-                  : 'opacity-100 scale-100'
+                : 'opacity-100 scale-100'
             } ${
               windowState === 'terminal_fullscreen'
                 ? 'w-screen h-screen top-0 left-0'
-                : 'w-[70vw] h-[70vh] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2'
+                : 'w-[70vw] h-[70vh]'
             }`}
             style={{ 
               zIndex: 10, 
               transition: 'opacity 150ms ease-out, transform 150ms ease-out',
-              pointerEvents: (appState === 'desktop' || appState === 'terminal_closing') ? 'none' : 'auto'
+              pointerEvents: (mainState === 'desktop' || !terminalVisible) ? 'none' : 'auto',
+              ...(windowState !== 'terminal_fullscreen' && {
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)'
+              })
             }}
           >
             <TerminalWindow
@@ -117,7 +121,7 @@ function App() {
               onMinimize={handleMinimizeTerminal}
               onToggleMaximize={handleToggleMaximize}
               isMaximized={windowState === 'terminal_fullscreen'}
-              isTerminalOpen={appState === 'terminal_open' || appState === 'terminal_opening'}
+              isTerminalOpen={terminalVisible}
             />
           </div>
         )}

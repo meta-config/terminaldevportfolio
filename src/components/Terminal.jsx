@@ -143,14 +143,12 @@ const Terminal = ({ onExit, isTerminalOpen }) => {
   const modeRef = useRef(mode)
   modeRef.current = mode
 
-  // Auto-focus input when terminal opens
+  // Auto-focus input when terminal opens or state changes
   useEffect(() => {
     if (isTerminalOpen && mode === 'terminal') {
-      // Focus immediately after render
-      const timer = setTimeout(() => {
+      requestAnimationFrame(() => {
         inputRef.current?.focus()
-      }, 0)
-      return () => clearTimeout(timer)
+      })
     }
   }, [isTerminalOpen, mode])
 
@@ -490,6 +488,16 @@ const Terminal = ({ onExit, isTerminalOpen }) => {
         return
       }
 
+      if (activeApp) {
+        closeApp()
+        pushEntry({ type: 'output', value: '^C' })
+        pushEntry({ type: 'output', value: 'Process terminated' })
+        requestAnimationFrame(() => {
+          inputRef.current?.focus()
+        })
+        return
+      }
+
       if (activeProcess) {
         const pid = activeProcess.pid
         setProcesses((prev) => prev.map((process) => (
@@ -630,10 +638,21 @@ const Terminal = ({ onExit, isTerminalOpen }) => {
         if (trimmedInput.toLowerCase() === 'exit') {
           clearOutputTimers()
           pushEntry({ type: 'input', value: rawInput, pathLabel: promptPath })
+          
+          if (activeApp) {
+            closeApp()
+            pushEntry({ type: 'output', value: 'Application closed' })
+            setInput('')
+            setCursorPosition(0)
+            requestAnimationFrame(() => {
+              inputRef.current?.focus()
+            })
+            return
+          }
+          
           pushEntry({ type: 'output', value: 'logout\nsession closed' })
           setInput('')
           setCursorPosition(0)
-          // Notify parent to show desktop
           if (onExit) {
             setTimeout(() => onExit(), 500)
           }
@@ -687,15 +706,22 @@ const Terminal = ({ onExit, isTerminalOpen }) => {
           setAttachedProcessPid(pid)
           pushEntry({ type: 'output', value: `[${pid}] running ${trimmedInput}` })
         } else if (commandResult.content === '__EXIT__') {
-          pushEntry({ type: 'output', value: 'logout\nsession closed' })
-          setProcesses((prev) => prev.map((item) => (
-            item.pid === pid ? { ...item, status: 'terminated' } : item
-          )))
-          setActiveProcess(null)
-          setAttachedProcessPid(null)
-          // Notify parent to show desktop
-          if (onExit) {
-            setTimeout(() => onExit(), 500)
+          if (activeApp) {
+            closeApp()
+            pushEntry({ type: 'output', value: 'Application closed' })
+            requestAnimationFrame(() => {
+              inputRef.current?.focus()
+            })
+          } else {
+            pushEntry({ type: 'output', value: 'logout\nsession closed' })
+            setProcesses((prev) => prev.map((item) => (
+              item.pid === pid ? { ...item, status: 'terminated' } : item
+            )))
+            setActiveProcess(null)
+            setAttachedProcessPid(null)
+            if (onExit) {
+              setTimeout(() => onExit(), 500)
+            }
           }
         } else if (commandResult.isError) {
           const outputLines = commandResult.content.split('\n')

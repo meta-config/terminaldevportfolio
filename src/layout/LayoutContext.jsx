@@ -10,16 +10,22 @@ export const useLayout = () => {
   return context
 }
 
-export const LayoutProvider = ({ children }) => {
+export const LayoutProvider = ({ children, onSetActiveApp }) => {
   const [activeApp, setActiveApp] = useState(null)
 
   const openApp = useCallback((appName) => {
     setActiveApp(appName)
-  }, [])
+    if (onSetActiveApp) {
+      onSetActiveApp(appName)
+    }
+  }, [onSetActiveApp])
 
   const closeApp = useCallback(() => {
     setActiveApp(null)
-  }, [])
+    if (onSetActiveApp) {
+      onSetActiveApp(null)
+    }
+  }, [onSetActiveApp])
 
   const isAppOpen = activeApp !== null
 

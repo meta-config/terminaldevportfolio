@@ -17,17 +17,15 @@ const TerminalWindow = ({ onClose, onMinimize, onToggleMaximize, isMaximized, on
   }, [onMinimize])
 
   return (
-    <div className="w-full h-full flex flex-col bg-black">
-      {/* Window Title Bar */}
+    <div className={`w-full h-full flex flex-col bg-black ${
+      !isMaximized ? 'border-2 border-green-700 shadow-lg shadow-green-900/20' : ''
+    }`}>
       <div className="flex items-center justify-between bg-gray-900 border-b-2 border-green-800 px-3 py-2 select-none flex-shrink-0">
-        {/* Title */}
         <div className="text-green-500 text-sm font-mono">
           samarsingh@portfolio: ~
         </div>
 
-        {/* Window Controls */}
         <div className="flex items-center gap-2">
-          {/* Minimize */}
           <button
             onClick={handleMinimize}
             className="w-6 h-6 flex items-center justify-center text-yellow-500 hover:bg-yellow-900 hover:text-black transition-colors font-mono text-lg leading-none"
@@ -36,7 +34,6 @@ const TerminalWindow = ({ onClose, onMinimize, onToggleMaximize, isMaximized, on
             —
           </button>
 
-          {/* Maximize */}
           <button
             onClick={handleMaximize}
             className="w-6 h-6 flex items-center justify-center text-green-500 hover:bg-green-900 hover:text-black transition-colors font-mono text-sm leading-none"
@@ -45,7 +42,6 @@ const TerminalWindow = ({ onClose, onMinimize, onToggleMaximize, isMaximized, on
             {isMaximized ? '❐' : '□'}
           </button>
 
-          {/* Close */}
           <button
             onClick={handleClose}
             className="w-6 h-6 flex items-center justify-center text-red-500 hover:bg-red-900 hover:text-black transition-colors font-mono text-lg leading-none"
@@ -56,7 +52,6 @@ const TerminalWindow = ({ onClose, onMinimize, onToggleMaximize, isMaximized, on
         </div>
       </div>
 
-      {/* Terminal Content */}
       <div className="flex-1 min-h-0">
         <Terminal onExit={onExit} isTerminalOpen={isTerminalOpen} />
       </div>
